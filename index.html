@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Kruskal's Algorithm Visualization</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+    canvas {
+      border: 1px solid #ccc;
+      margin-top: 20px;
+    }
+    #log {
+      text-align: left;
+      width: 600px;
+      margin: 20px auto;
+      padding: 10px;
+      border: 1px solid #ddd;
+      height: 150px;
+      overflow-y: auto;
+      background-color: #f9f9f9;
+    }
+    input, button {
+      margin: 5px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Kruskal's Algorithm Visualizer</h1>
+
+<div>
+  <label>Number of Nodes: </label>
+  <input type="number" id="numNodes" min="2" value="5"><br>
+  <label>Enter edges (format: u v weight):</label><br>
+  <textarea id="edgesInput" rows="6" cols="50" placeholder="0 1 10\n1 2 5\n2 3 7\n3 4 2\n0 4 6\n..."></textarea><br>
+  <button onclick="startKruskal()">Run Kruskal's Algorithm</button>
+</div>
+
+<canvas id="graphCanvas" width="600" height="400"></canvas>
+
+<div id="log"></div>
+
+<script>
+const canvas = document.getElementById("graphCanvas");
+const ctx = canvas.getContext("2d");
+const logDiv = document.getElementById("log");
+let positions = [];
+
+function log(msg) {
+  const p = document.createElement("p");
+  p.textContent = msg;
+  logDiv.appendChild(p);
+  logDiv.scrollTop = logDiv.scrollHeight;
+}
+
+function clearCanvas() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function drawNode(x, y, label) {
+  ctx.beginPath();
+  ctx.arc(x, y, 20, 0, 2 * Math.PI);
+  ctx.fillStyle = "#fff";
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = "#000";
+  ctx.fillText(label, x - 5, y + 5);
+}
+
+function drawEdge(x1, y1, x2, y2, weight, color = "gray") {
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.strokeStyle = color;
+  ctx.stroke();
+
+  const midX = (x1 + x2) / 2;
+  const midY = (y1 + y2) / 2;
+  ctx.fillStyle = "#000";
+  ctx.fillText(weight, midX, midY);
+}
+
+function getNodePositions(n) {
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+  const radius = 150;
+  const positions = [];
+
+  for (let i = 0; i < n; i++) {
+    const angle = (2 * Math.PI * i) / n;
+    const x = centerX + radius * Math.cos(angle);
+    const y = centerY + radius * Math.sin(angle);
+    positions.push({ x, y });
+  }
+  return positions;
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function startKruskal() {
+  logDiv.innerHTML = '';
+  clearCanvas();
+
+  const numNodes = parseInt(document.getElementById("numNodes").value);
+  const edgesInput = document.getElementById("edgesInput").value.trim();
+  const edges = edgesInput.split("\n").map(line => {
+    const [u, v, w] = line.trim().split(" ").map(Number);
+    return { u, v, w };
+  });
+
+  positions = getNodePositions(numNodes);
+
+  // Draw all nodes
+  for (let i = 0; i < numNodes; i++) {
+    const { x, y } = positions[i];
+    drawNode(x, y, i);
+  }
+
+  // Draw all edges in gray
+  for (const { u, v, w } of edges) {
+    const { x: x1, y: y1 } = positions[u];
+    const { x: x2, y: y2 } = positions[v];
+    drawEdge(x1, y1, x2, y2, w);
+  }
+
+  log("Sorting edges by weight...");
+  edges.sort((a, b) => a.w - b.w);
+
+  let parent = Array(numNodes).fill(0).map((_, i) => i);
+  function find(u) {
+    if (parent[u] !== u)
+      parent[u] = find(parent[u]);
+    return parent[u];
+  }
+
+  function union(u, v) {
+    const pu = find(u);
+    const pv = find(v);
+    if (pu === pv) return false;
+    parent[pu] = pv;
+    return true;
+  }
+
+  log("Starting Kruskal's Algorithm...");
+  let mst = [];
+
+  for (const { u, v, w } of edges) {
+    log(`Checking edge ${u} - ${v} (weight: ${w})`);
+    await sleep(1000);
+
+    if (union(u, v)) {
+      log(`✅ Edge ${u} - ${v} added to MST`);
+      mst.push({ u, v, w });
+
+      const { x: x1, y: y1 } = positions[u];
+      const { x: x2, y: y2 } = positions[v];
+      drawEdge(x1, y1, x2, y2, w, "green");
+
+      await sleep(800);
+    } else {
+      log(`❌ Edge ${u} - ${v} creates a cycle. Skipping.`);
+    }
+  }
+
+  log(`MST Completed. Total edges in MST: ${mst.length}`);
+}
+</script>
+
+</body>
+</html>
